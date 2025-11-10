@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Access Terminal</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root {
+      --accent: #00ff9c;
+      --accent-soft: rgba(0, 255, 156, 0.16);
+      --bg: #020307;
+      --text: #e5fff4;
+      --error: #ff3366;
+    }
+    * {
+      box-sizing: border-box;
+      font-family: "Consolas", "Fira Code", monospace;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      overflow: hidden;
+      color: var(--text);
+    }
+    #matrix {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: block;
+      z-index: 0;
+      background: radial-gradient(circle at top, #061b14 0%, #010104 50%, #000 100%);
+    }
+    #login {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2;
+      opacity: 1;
+      transition: opacity 0.4s ease;
+    }
+    .panel {
+      background: rgba(1, 5, 8, 0.94);
+      border: 1px solid var(--accent-soft);
+      box-shadow: 0 0 40px rgba(0, 255, 156, 0.14);
+      padding: 24px 26px 20px;
+      border-radius: 14px;
+      width: min(340px, 92vw);
+      backdrop-filter: blur(6px);
+      animation: fadeIn 0.6s ease-out;
+    }
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+      font-size: 11px;
+      color: #7bf5c0;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+    .indicator-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--accent);
+      box-shadow: 0 0 8px var(--accent);
+    }
+    h1 {
+      margin: 0 0 14px;
+      font-size: 18px;
+      color: var(--accent);
+      text-shadow: 0 0 8px rgba(0, 255, 156, 0.5);
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+    label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: #7bf5c0;
+      display: block;
+      margin-bottom: 4px;
+    }
+    input[type="password"] {
+      width: 100%;
+      padding: 8px 9px;
+      margin-bottom: 9px;
+      border-radius: 7px;
+      border: 1px solid rgba(0, 255, 156, 0.25);
+      background: rgba(0, 0, 0, 0.9);
+      color: var(--text);
+      font-size: 13px;
+      outline: none;
+    }
+    input[type="password"]::placeholder {
+      color: rgba(180, 255, 225, 0.3);
+    }
+    input[type="password"]:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 10px rgba(0, 255, 156, 0.24);
+    }
+    button {
+      width: 100%;
+      padding: 7px 9px;
+      border-radius: 7px;
+      border: 1px solid var(--accent);
+      background: radial-gradient(circle at top, rgba(0, 255, 156, 0.18), rgba(0, 0, 0, 1));
+      color: var(--accent);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      cursor: pointer;
+      transition: all 0.16s ease;
+    }
+    button:hover {
+      box-shadow: 0 0 14px rgba(0, 255, 156, 0.35);
+      transform: translateY(-1px);
+    }
+    button:active {
+      transform: translateY(1px) scale(0.98);
+      box-shadow: 0 0 4px rgba(0, 255, 156, 0.2);
+    }
+    #message {
+      margin-top: 5px;
+      min-height: 14px;
+      font-size: 10px;
+      color: var(--error);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    #win-screen {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      background: radial-gradient(circle at center, rgba(0, 255, 156, 0.18), rgba(0, 0, 0, 0.98));
+      color: var(--accent);
+      z-index: 3;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.6s ease;
+      text-align: center;
+    }
+    #win-screen.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    #win-screen h2 {
+      margin: 0;
+      font-size: clamp(28px, 6vw, 40px);
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      text-shadow: 0 0 18px rgba(0, 255, 156, 0.8);
+    }
+    #win-screen p {
+      margin: 0;
+      font-size: 13px;
+      letter-spacing: 0.12em;
+      color: #b9ffe4;
+      text-transform: uppercase;
+    }
+    .scanline {
+      position: absolute;
+      top: -20%;
+      width: 100%;
+      height: 12%;
+      opacity: 0.06;
+      background: linear-gradient(
+        to bottom,
+        rgba(0, 255, 156, 0) 0%,
+        rgba(0, 255, 156, 1) 40%,
+        rgba(0, 255, 156, 0) 100%
+      );
+      animation: scan 3.5s linear infinite;
+    }
+    @keyframes scan {
+      0% { transform: translateY(0); }
+      100% { transform: translateY(130vh); }
+    }
+
+    /* Audio gate overlay */
+    #audio-gate {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 10px;
+      background: rgba(0, 0, 0, 0.88);
+      color: var(--accent);
+      z-index: 5;
+      text-align: center;
+      transition: opacity 0.4s ease, visibility 0.4s ease;
+    }
+    #audio-gate.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+    #audio-gate button {
+      width: auto;
+      padding-inline: 16px;
+    }
+    #audio-gate p {
+      margin: 0;
+      font-size: 12px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #c4fff0;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="matrix"></canvas>
+
+  <!-- Your MP3 hosted on your site -->
+  <audio
+    id="bg-music"
+    loop
+    preload="auto"
+    src="you-are-my-sunshine.mp3"
+  ></audio>
+
+  <!-- Tap to enable audio -->
+  <div id="audio-gate">
+    <p>TAP TO ENABLE AUDIO</p>
+    <button id="audio-btn">Begin</button>
+    <p style="font-size:10px; opacity:0.7;">(Browser needs a tap before music can play)</p>
+  </div>
+
+  <div id="login">
+    <div class="panel">
+      <div class="panel-header">
+        <span>SECURE ACCESS NODE: 07</span>
+        <span class="indicator-dot"></span>
+      </div>
+      <h1>ACCESS TERMINAL</h1>
+      <label for="password-input">Root passphrase</label>
+      <input type="password" id="password-input" placeholder="********" autocomplete="off" />
+      <button id="unlock-btn">Unlock</button>
+      <div id="message"></div>
+    </div>
+  </div>
+
+  <div id="win-screen">
+    <div class="scanline"></div>
+    <h2>YOU WIN</h2>
+    <p>ACCESS GRANTED · SYSTEM OVERRIDDEN</p>
+  </div>
+
+  <script>
+    // MATRIX BACKGROUND
+    const canvas = document.getElementById("matrix");
+    const ctx = canvas.getContext("2d");
+    const fontSize = 16;
+    let columns, drops;
+
+    function initMatrix() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      columns = Math.floor(canvas.width / fontSize);
+      drops = Array.from({ length: columns }, () => Math.floor(Math.random() * -40));
+    }
+
+    initMatrix();
+    window.addEventListener("resize", initMatrix);
+
+    const symbols =
+      "アイウエオカキクケコサシスセソタチツテトナニヌネノ0123456789@#$%&*{}[]/\\|+=-_.";
+    function drawMatrix() {
+      ctx.fillStyle = "rgba(0, 0, 0, 0.12)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = "#00ff9c";
+      ctx.font = fontSize + "px Consolas, monospace";
+
+      for (let i = 0; i < drops.length; i++) {
+        const text = symbols.charAt(Math.floor(Math.random() * symbols.length));
+        const x = i * fontSize;
+        const y = drops[i] * fontSize;
+
+        ctx.fillText(text, x, y);
+
+        if (y > canvas.height && Math.random() > 0.975) {
+          drops[i] = Math.floor(Math.random() * -20);
+        } else {
+          drops[i]++;
+        }
+      }
+
+      requestAnimationFrame(drawMatrix);
+    }
+
+    drawMatrix();
+
+    // PASSWORD + AUDIO
+    const PASSWORD = "sunshine";
+    const passwordInput = document.getElementById("password-input");
+    const unlockBtn = document.getElementById("unlock-btn");
+    const message = document.getElementById("message");
+    const winScreen = document.getElementById("win-screen");
+    const login = document.getElementById("login");
+    const bgMusic = document.getElementById("bg-music");
+    const audioGate = document.getElementById("audio-gate");
+    const audioBtn = document.getElementById("audio-btn");
+
+    let musicStarted = false;
+
+    function startMusic() {
+      if (musicStarted || !bgMusic) return;
+      bgMusic.play().then(() => {
+        musicStarted = true;
+        audioGate.classList.add("hidden");
+      }).catch(() => {
+        audioGate.classList.add("hidden");
+      });
+    }
+
+    audioBtn.addEventListener("click", startMusic);
+    audioGate.addEventListener("click", (e) => {
+      if (e.target === audioGate) startMusic();
+    });
+
+    function checkPassword() {
+      const value = passwordInput.value.trim().toLowerCase();
+      if (value === PASSWORD) {
+        message.textContent = "";
+        login.style.opacity = "0";
+        setTimeout(() => {
+          login.style.display = "none";
+          winScreen.classList.add("visible");
+        }, 380);
+      } else {
+        message.textContent = "ACCESS DENIED: INVALID PASSPHRASE";
+        passwordInput.value = "";
+        passwordInput.focus();
+      }
+    }
+
+    unlockBtn.addEventListener("click", checkPassword);
+    passwordInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") checkPassword();
+    });
+  </script>
+</body>
+</html>
